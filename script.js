@@ -1,4 +1,4 @@
-// Custom Http Module
+// модуль HTTP
 function customHttp() {
   return {
     get(url, cb) {
@@ -53,10 +53,71 @@ function customHttp() {
     },
   };
 }
-// Init http module
+
+// Инициация http запроса
 const http = customHttp();
 
-//  init selects
+const newsService = (function () {
+  const apiKey = '622d66d9dd7a4934b5cd17bb3ae1d14b';
+  const apiUrl = 'https://newsapi.org/v2';
+  
+  return {
+    topHeadlines(country = 'ua', cb) {
+      http.get(`${apiUrl}/top-headlines?country=${country}&category=technology&apiKey=${apiKey}`, cb);
+    },
+    everything(query, cb) {
+      http.get(`${apiUrl}/everything?q=${query}&apiKey=${apiKey}`, cb);
+    }
+  };
+})();
+
+// Инициация селекта
 document.addEventListener('DOMContentLoaded', function() {
   M.AutoInit();
+  loadNews();
 });
+
+// Начальняя загрузка новостей.
+function loadNews () {
+  newsService.topHeadlines('ua', onGetResponse);
+}
+
+// функция обработки ответа от сервера.
+function onGetResponse (err, res) {
+  console.log(res.articles);
+  renderNews(res.articles);
+}
+
+// функция отрисовки новостей.
+function renderNews (news) {
+  const newsContainer = document.querySelector('.news-container .row');
+  let fragment = '';
+
+  news.forEach(newsIt => {
+  const it = newsTemlate(newsIt);
+  fragment += it;
+  });
+
+  newsContainer.insertAdjacentHTML('afterbegin', fragment);
+}
+
+// функция для разметки одной новости.
+function newsTemlate (news) {
+  console.log(news);
+  return `
+  <div class="col s12">
+    <div class="card">
+      <div class="card-image">
+        <img src="${news.urlToImage}">
+        <span class="card-title">${news.title || ''}</span>        
+      </div>
+      <div class="card-content">
+        <p>${news.description || ''}</p> 
+      </div>
+      <div class="card-action">
+        <a href="${news.url}">Read more</a>
+      </div>
+    </div>
+  </div>
+  `;
+}
