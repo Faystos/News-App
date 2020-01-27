@@ -63,13 +63,24 @@ const newsService = (function () {
   
   return {
     topHeadlines(country = 'ua', cb) {
-      http.get(`${apiUrl}/top-headlines?country=${country}&category=technology&apiKey=${apiKey}`, cb);
+      http.get(`${apiUrl}/top-headlines?country=${country}&category=science&apiKey=${apiKey}`, cb);
     },
     everything(query, cb) {
       http.get(`${apiUrl}/everything?q=${query}&apiKey=${apiKey}`, cb);
     }
   };
 })();
+
+// Элементы DOM.
+const form = document.forms['newsControls'];
+const countrySelect = form.elements['country'];
+const searchInput = form.elements['search'];
+
+// Обработка отправки формы.
+form.addEventListener('submit', evt => {
+  evt.preventDefault();
+  loadNews();  
+});
 
 // Инициация селекта
 document.addEventListener('DOMContentLoaded', function() {
@@ -79,18 +90,39 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Начальняя загрузка новостей.
 function loadNews () {
-  newsService.topHeadlines('ua', onGetResponse);
+  showLoader();
+  const countrySelectValue = countrySelect.value;
+  const searchInputValue = searchInput.value;
+
+  if (!searchInputValue) {
+    newsService.topHeadlines(countrySelectValue, onGetResponse);
+  } else {
+    newsService.everything(searchInputValue, onGetResponse);
+  }  
 }
 
 // функция обработки ответа от сервера.
-function onGetResponse (err, res) {
-  console.log(res.articles);
+function onGetResponse (err, res) { 
+  removeLoader();
+  if (err) {
+    showAlert(err, 'error-msg');
+    return;
+  } 
+  if (!res.articles.length) {    
+    document.querySelector('.news-container .row').innerHTML = '';
+    showAlert('По вашему запросу ничего не найдено.');
+    form.reset();        
+    return;
+  }
   renderNews(res.articles);
 }
 
 // функция отрисовки новостей.
 function renderNews (news) {
   const newsContainer = document.querySelector('.news-container .row');
+  if (newsContainer.children.length) {
+    clearConteiner(newsContainer);
+  }
   let fragment = '';
 
   news.forEach(newsIt => {
@@ -101,9 +133,17 @@ function renderNews (news) {
   newsContainer.insertAdjacentHTML('afterbegin', fragment);
 }
 
+// функция отчистки от новстей.
+function clearConteiner (conteiner) {
+  let lastChild = conteiner.lastElementChild;
+  while (lastChild) {
+    conteiner.removeChild(lastChild);
+    lastChild = conteiner.lastElementChild;
+  }
+}
+
 // функция для разметки одной новости.
-function newsTemlate (news) {
-  console.log(news);
+function newsTemlate (news) {  
   return `
   <div class="col s12">
     <div class="card">
@@ -120,4 +160,28 @@ function newsTemlate (news) {
     </div>
   </div>
   `;
+}
+
+// Функция для вывола всплывающих окон с сообщением.
+function showAlert (msg, type = 'success') {
+  M.toast({html: msg, classes: type});
+}
+
+// Функция для отображени прилоадера
+function showLoader () {
+  document.body.insertAdjacentHTML('afterbegin',
+  `
+  <div class="progress">
+    <div class="indeterminate"></div>
+  </div>
+  `
+  );
+}
+
+// Функция скрывающая прилоадер
+function removeLoader () {
+  const loader = document.querySelector('.progress');
+  if(loader){
+    loader.remove();
+  }
 }
